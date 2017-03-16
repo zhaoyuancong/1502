@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<script src="js/jquery-3.1.1.js"></script>
+		<style>
+			*{
+				padding: 0;
+				margin: 0;
+			}
+			table{
+				border-collapse: collapse;
+			}
+			thead tr td{
+				width: 150px;
+				height: 60px;
+				line-height: 60px;
+				text-align: center;
+				font-weight: bold;
+			}
+			tbody tr td{
+				width: 120px;
+				height: 60px;
+				line-height: 60px;
+				text-align: center;
+			}
+			#mydiv2 p{
+				font-size: 20px;
+				font-weight: bold;
+				margin-left: 33px;
+			}
+			.active{
+				background: blue;
+			}
+			#mydiv3{
+				width: 300px;
+				height: 300px;
+				border: 1px solid green;
+			}
+			#mydiv3 p{
+				color: red;
+			}
+			#mydiv1{
+				/*margin: 0 auto;*/
+				margin-left: 100px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="mydiv1">
+			<select></select>
+			<select></select>
+			<button id="btn">查询</button>
+			<div id="mydiv2">
+				
+			</div>
+			<table border="1">
+				<thead>
+					<!--<tr>
+						<td>点击勾选</td>
+						<td>日期</td>
+						<td>天气类型</td>
+					</tr>-->
+				</thead>
+				<tbody>
+					
+				</tbody>
+			</table>
+			<p>详情:</p>
+			<div id="mydiv3">
+				
+			</div>
+		</div>
+	</body>
+	<script>
+		$(function(){
+			var $a = null;
+			var $fore = null;
+			$.ajax({
+				type:"get",
+				url:"json/city.json",
+				async:true,
+				data:{},
+				dataType:"json",
+				success:function(datas){
+					$a = datas;
+//					console.log(datas);
+					$.each($a.citylist, function(i,v) {
+//						console.log(v);
+						$("select").eq(0).append("<option>"+v.p+"</option>");
+					});
+				}
+			});
+			//当第一个下拉菜单发生变化时触发此函数
+			$("select").eq(0).change(function(){
+				$("select").eq(1).html(" ");
+				var $val = $(this).val();
+//				console.log($val);
+				$.each($a.citylist, function(i,v) {
+//					console.log(v);
+					if( $val == v.p ){
+						$.each(v.c, function(i,v) {
+//							console.log(v);
+							$("select").eq(1).append("<option>"+v.n+"</option>");
+						});
+					}
+				});
+			})
+			$("#btn").click(function(){
+				//点击之前先移除
+				$("#mydiv2").children().remove();
+				$("thead").children().remove();
+				$("tbody").children().remove();
+				$("#mydiv3").children().remove();
+				var $val = $("select").eq(1).val();
+				$.ajax({
+					type:"get",
+					url:"http://wthrcdn.etouch.cn/weather_mini?city="+$val,
+					async:true,
+					data:{},
+					dataType:"jsonp",
+					success:function(datas){
+						console.log(datas);
+						if( datas.status != 1000 ){
+							$("#mydiv2").append("<p>"+$val+"最近没有天气情况</p>");
+						}
+						else{
+							$("#mydiv2").append("<p>"+$val+"最近五天的天气情况</p>");
+							$("thead").append("<tr><td>点击勾选</td><td>日期</td><td>天气类型</td><tr>")
+							var $yes = datas.data.yesterday;
+						    $fore = datas.data.forecast;
+						    $fore.unshift($yes);   //把$yes增加到$fore的头部
+						    $fore[0]["fengxiang"]=$fore[0]["fl"];
+						    $fore[0]["fengli"]=$fore[0]["fx"];
+//						    console.log($fore);
+//							$("tbody").append("<tr><td><input type='checkbox' /></td><td>"+$yes.date+"</td><td>"+$yes.type+"</td></tr>");
+							$.each($fore, function(i,v) {
+//								console.log(v);
+								$("tbody").append("<tr><td><input type='checkbox' /></td><td>"+v.date+"</td><td>"+v.type+"</td></tr>");
+							});
+							$("tbody tr").eq(1).find("td").eq(1).append("<span>(今天)</span>");
+						}
+					}
+				});
+			})
+			//如果在后来追加的元素上绑定一个事件用事件委托
+			$(document).on("click","tbody tr",function(){
+				//点击之前先移除
+				$("#mydiv3").children().remove();
+//				$(this).addClass("active").siblings().removeClass("active").find(":checkbox").prop("checked");
+				$.each($("tbody tr"), function() {
+					$(this).removeClass("active").find(":checkbox").prop("checked",false);
+				});
+				$(this).addClass("active").find(":checkbox").prop("checked",true);
+//				console.log( $(this).index() );
+//				console.log($fore[ $(this).index() ]);
+				var $c = $fore[ $(this).index() ];
+				$("#mydiv3").append("<p>"+$c.date+"的天气祥情</p><p>风力:"+$c.fengli+"</p><p>风向:"+$c.fengxiang+"</p><p>"+$c.high+"</p><p>"+$c.low+"</p><p>天气类型:"+$c.type+"</p>");
+			})
+			
+		})
+	</script>
+</html>

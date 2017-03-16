@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<script src="js/jquery-3.1.1.js"></script>
+		<style>
+			*{
+				padding: 0;
+				margin: 0;
+			}
+			#mydiv2{
+				margin-left: 20px;
+				font-size: 20px;
+				font-weight: bolder;
+			}
+			table{
+				border-collapse: collapse;
+			}
+			thead tr td{
+				width: 120px;
+				height: 50px;
+				line-height: 50px;
+				text-align: center;
+			}
+			tbody tr td{
+				width: 120px;
+				height: 50px;
+				line-height: 50px;
+				text-align: center;
+			}
+			#mydiv3{
+				width: 300px;
+				height: 300px;
+				border: 1px solid #ccc;
+			}
+			.active{
+				background: blue;
+			}
+			#mydiv3 p{
+				color: red;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="mydiv1">
+			<select></select>
+			<select></select>
+			<button id="btn">查询</button>
+			<div id="mydiv2">
+				
+			</div>
+			<table border="1">
+				<thead>
+					
+				</thead>
+				<tbody>
+					
+				</tbody>
+			</table>
+			详情:
+			<div id="mydiv3">
+			
+			</div>
+		</div>
+	</body>
+	<script>
+		$(function(){
+			//定义全局变量
+			var dataList = null;
+			var $a = null;
+			$.ajax({
+				type:"get",
+				url:"json/city.json",
+				async:true,
+				data:{},
+				dataType:"json",
+				success:function(datas){
+					dataList = datas;
+//					console.log(dataList);
+					$.each(dataList.citylist, function(i,v) {
+//						console.log(v);
+						$("select").eq(0).append("<option>"+v.p+"</option>");
+					});
+				}
+			});
+			//当第一个下拉菜单发生变化时触发此函数
+			$("select").eq(0).change(function(){
+				$("select").eq(1).html(" ");
+				var $val = $(this).val();
+				$.each(dataList.citylist, function(i,v) {
+//					console.log(v);
+					if( $val == v.p ){
+						$.each(v.c, function(i,v) {
+//							console.log(v);
+							$("select").eq(1).append("<option>"+v.n+"</option>");
+						});
+					}
+				});
+			})
+			$("#btn").click(function(){
+				$("#mydiv2").children().remove();
+				$("thead").children().remove();
+				$("tbody").children().remove();
+				$("#mydiv3").children().remove();
+				var $val = $("select").eq(1).val();
+				$.ajax({
+					type:"get",
+					url:"http://wthrcdn.etouch.cn/weather_mini?city="+$val,
+					async:true,
+					data:{},
+					dataType:"jsonp",
+					success:function(datas){
+						console.log(datas);
+						if( datas.status != 1000 ){
+							$("#mydiv2").append("<p>"+$val+"没有天气情况</p>");
+						}
+						else{
+							$("#mydiv2").append("<p>"+$val+"最近五天的天气预报</p>");
+							$("thead").append("<tr><td>点击勾选</td><td>日期</td><td>天气类型</td></tr>");
+							var $yesterday = datas.data.yesterday;
+							$a = datas.data.forecast;
+							$a.unshift($yesterday);
+							$a[0]["fengxiang"]=$a[0]["fl"];
+							$a[0]["fengli"]=$a[0]["fx"];
+							console.log($a);
+//							$("tbody").append("<tr><td><input type='checkbox' /></td><td>"+$yesterday.date+"</td><td>"+$yesterday.type+"</td></tr>")
+							$.each($a, function(i,v) {
+//								console.log(v);
+								$("tbody").append("<tr><td><input type='checkbox' /></td><td>"+v.date+"</td><td>"+v.type+"</td></tr>");
+							});
+							$("tbody tr").eq(1).find("td").eq(1).append("<span>(今天)</span>");
+						}
+					}
+				});
+			})
+			$(document).on("click","tbody tr",function(){
+				$("#mydiv3").children().remove();
+				$.each($("tbody tr"), function() {
+					$(this).removeClass("active").find(":checkbox").prop("checked",false);
+				});
+				$(this).addClass("active").find(":checkbox").prop("checked",true);
+				console.log( $(this).index() );   // 下标
+				var $data = $a[ $(this).index() ];
+				console.log($data);
+				$("#mydiv3").append("<p>"+$data.date+"的天气详情</p><p>风力:"+$data.fengli+"</p><p>风向:"+$data.fengxiang+"</p><p>高温:"+$data.high+"</p><p>低温:"+$data.low+"</p><p>天气类型:"+$data.type+"</p>");
+			})
+		})
+	</script>
+</html>
